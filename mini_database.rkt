@@ -1,0 +1,456 @@
+#lang racket
+(define NULL 'null)
+
+;====================================
+;=            Cerința 1             =
+;= Definirea elementelor de control =
+;=          20 de puncte            =
+;====================================
+
+;= Funcțiile de acces
+(define init-database
+  (λ ()
+    '()))
+
+(define create-table
+  (λ (table columns-name)
+    (reverse (foldl (λ(elem acc)
+             (cons (list elem) acc))
+           (list table)
+           columns-name))
+    
+    ))
+
+(define get-name
+  (λ (table)
+    (car table)))
+
+(define get-columns
+  (λ (table)
+   (reverse (foldl (λ(elem acc)
+             (cons (car elem) acc))
+           '()
+           (cdr table)))
+    ))
+
+(define get-tables
+  (λ (db)
+    (foldl (λ(elem acc)
+             (cons elem acc))
+           '()
+           db)
+))
+
+(define get-table
+  (λ (db table-name)
+    (if (null? db)
+        '()
+        (if (equal? (car (car db)) table-name)
+            (car db)
+            (get-table (cdr db) table-name))))
+    )
+
+(define add-table
+  (λ (db table)
+    (reverse (cons table db))))
+
+(define remove-table
+  (λ (db table-name)
+    (remove (get-table db table-name) db)))
+
+;= Pentru testare, va trebui să definiți o bază de date (având identificatorul db) cu următoarele tabele
+
+;============================================================================================
+;=                         Tabela Studenți                                                   =
+;= +----------------+-----------+---------+-------+-------+                                  =
+;= | Număr matricol |   Nume    | Prenume | Grupă | Medie |                                  =
+;= +----------------+-----------+---------+-------+-------+                                  =
+;= |            123 | Ionescu   | Gigel   | 321CA |  9.82 |                                  =
+;= |            124 | Popescu   | Maria   | 321CB |  9.91 |                                  =
+;= |            125 | Popa      | Ionel   | 321CC |  9.99 |                                  =
+;= |            126 | Georgescu | Ioana   | 321CD |  9.87 |                                  =
+;= +----------------+-----------+---------+-------+-------+                                  =
+;=                                                                                           =
+;=                                         Tabela Cursuri                                    =
+;= +------+----------+-----------------------------------+---------------+------------+      =
+;= | Anul | Semestru |            Disciplină             | Număr credite | Număr teme |      =
+;= +------+----------+-----------------------------------+---------------+------------+      =
+;= | I    | I        | Programarea calculatoarelor       |             5 |          2 |      =
+;= | II   | II       | Paradigme de programare           |             6 |          3 |      =
+;= | III  | I        | Algoritmi paraleli și distribuiți |             5 |          3 |      =
+;= | IV   | I        | Inteligență artificială           |             6 |          3 |      =
+;= | I    | II       | Structuri de date                 |             5 |          3 |      =
+;= | III  | II       | Baze de date                      |             5 |          0 |      =
+;= +------+----------+-----------------------------------+---------------+------------+      =
+;============================================================================================
+(define db
+  '(("Studenți"
+   ("Număr matricol" 123 124 125 126)
+   ("Nume" "Ionescu" "Popescu" "Popa" "Georgescu")
+   ("Prenume" "Gigel" "Maria" "Ionel" "Ioana")
+   ("Grupă" "321CA" "321CB" "321CC" "321CD")
+   ("Medie" 9.82 9.91 9.99 9.87)
+   )
+  ("Cursuri"
+   ("Anul" "I" "II" "III" "IV" "I" "III")
+   ("Semestru" "I" "II" "I" "I" "II" "II")
+   ("Disciplină" "Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date")
+   ("Număr credite" 5 6 5 6 5 5)
+   ("Număr teme" 2 3 3 3 3 0)
+   )
+  )
+  )
+  
+;====================================
+;=            Cerința 2             =
+;=         Operația insert          =
+;=            10 puncte             =
+;====================================
+(define add-nulls
+  (λ(columns len)
+    (reverse (foldl (λ(elem acc)
+             (if (= (length elem) len)
+                 (cons  (append elem (list NULL)) acc) 
+                 (cons elem acc))
+             )
+           '()
+           columns))
+    )
+  )
+
+(define insert
+  (λ (db table-name record)
+    (let ( (len (length (car (cdr (get-table db table-name)))) ))
+
+     (foldl (λ(table acc)
+              (if (equal? (car table) table-name)
+                  (append acc (list (append (list (car (get-table db table-name)))
+                                      (add-nulls (foldl (λ(coloana acc)
+             
+                                                          (append acc (list (foldl (λ(elem1 acc)
+                                                                                     (if (equal? (car elem1) (car coloana))
+                                                                                         (append acc (list (cdr elem1)))
+                                                                                         acc)
+                      
+                                                                                     )
+                                                                                   coloana
+                                                                                   record)))
+                                                          )
+                                                        '()
+                                                        (cdr (get-table db table-name))) len))) )
+                  (append acc (list (get-table db (car table))))
+              ))
+            '()
+            db)
+        )
+    ))
+
+;====================================
+;=            Cerința 3 a)          =
+;=     Operația simple-select       =
+;=             10 puncte            =
+;====================================
+
+(define simple-select
+
+  (λ (db table-name columns)
+    (if (not (equal? (apply + (map length (cdr (get-table db table-name)))) (length (cdr (get-table db table-name)))))
+        (foldl (λ(col lista)
+                 (append lista (foldl (λ(elem acc)
+                                        (if (equal? (car elem) col)
+                                            (append acc (list (cdr elem)))
+                                            acc)
+                                        )
+                                      '()
+                                      (cdr (get-table db table-name))))
+                 )
+               '()
+               columns)
+        '())
+    ))
+
+;====================================
+;=            Cerința 3 b)          =
+;=           Operația select        =
+;=            30 de puncte          =
+;====================================
+(define min
+  (λ(column)
+      (define (min-aux e1 e2)
+        (if (< e1 e2) e1 e2))
+      (foldl min-aux (car column) (cdr column))
+      
+    )
+  )
+
+(define max
+  (λ(column)
+      (define (max-aux e1 e2)
+        (if (> e1 e2) e1 e2))
+      (foldl max-aux (car column) (cdr column))
+    )
+  )
+
+(define count
+  (λ(column)
+    (length (remove-duplicates column))
+    )
+  )
+
+(define sum
+  (λ(column)
+    (apply + column)
+    )
+  )
+
+(define avg
+  (λ(column)
+    (/ (apply + column) (count column))
+    )
+  )
+
+(define sort-asc
+  (λ(column)
+    (if (not (number? (car column)))
+        (sort column string<?)
+        (sort column <))
+    )
+  )
+
+(define sort-desc
+  (λ(column)
+    (if (not (number? (car column)))
+        (sort column string>?)
+        (sort column >))
+    )
+  )
+
+(define get-condition-indexes
+  (λ(db table-name condition)
+    (if (not (null? condition))
+        (let ( (my-table (get-table db table-name))
+               (comparator (car condition))
+               (condition-col (cadr condition))
+               (comp (caddr condition))
+               )
+          (sort (remove-duplicates (foldl (λ(elem acc)
+                                            (if (equal? (car elem) condition-col)
+                                                (append acc (foldl (λ(el acc1)
+                                                                     (if (comparator el comp)
+                                                                         (append acc1 (indexes-of (cdr elem) el))
+                                                                         acc1)
+                                                                     )
+                                                                   '()
+                                                                   (cdr elem)))
+                                                acc)
+                                            )
+                                          '()
+                                          (cdr my-table))) <)
+          )
+        '()
+        )
+    )
+  )
+
+(define (intersection L1 L2)
+  (if (null? L1)
+    '()
+    (if (member (car L1) L2)
+      (cons (car L1)(intersection (cdr L1) L2))
+      (intersection (cdr L1) L2)))
+  )
+
+(define (list-duplicates L)
+  (foldl (λ(elem acc)
+           (intersection acc elem)
+           )
+         (car L)
+         L)
+  )
+
+(define multiple-conditions
+  (λ(db table-name conditions)
+    (if (not (null? conditions))
+        (list-duplicates (foldl (λ(cond acc)
+                                  (append acc (list (get-condition-indexes db table-name cond)))
+                                  )
+                                '()
+                                conditions))
+        '()
+        )
+    )
+  )
+
+(define select-aux
+  
+  (λ (db table-name columns conditions)
+    (let ( (indexes (multiple-conditions db table-name conditions)) )
+      (if (not (null? indexes))
+          (foldl (λ(elem acc)
+                   (if (pair? elem)
+                       (append acc (list (foldl (λ(col acc2)
+                                                  (if (equal? (cdr elem) (car col))
+                                                      (append acc2 (foldl (λ(e acc)
+                                                                            (append acc (list (list-ref (cdr col) e)))
+                                                                            )
+                                                                          '()
+                                                                          indexes))
+                                                      acc2))
+                                                '()
+                                                (cdr (get-table db table-name)))))
+                       (append acc (list (foldl (λ(col acc2)
+                                                  (if (equal? elem (car col))
+                                                      (append acc2 (foldl (λ(e acc)
+                                                                            (append acc (list (list-ref (cdr col) e)))
+                                                                            )
+                                                                          '()
+                                                                          indexes))
+                                                      acc2))
+                                                '()
+                                                (cdr (get-table db table-name)))))
+                       )
+                   )
+                 '()
+                 columns)
+          
+          (foldl (λ(elem acc)
+                   (if (pair? elem)
+                       (append acc (list (foldl (λ(col acc2)
+                                                  (if (equal? (cdr elem) (car col))
+                                                      (append acc2 (foldl (λ(e acc)
+                                                                            (append acc (list e))
+                                                                            )
+                                                                          '()
+                                                                          (cdr col)))
+                                                      acc2))
+                                                '()
+                                                (cdr (get-table db table-name)))))
+                       (append acc (list (foldl (λ(col acc2)
+                                                  (if (equal? elem (car col))
+                                                      (append acc2 (foldl (λ(e acc)
+                                                                            (append acc (list e))
+                                                                            )
+                                                                          '()
+                                                                          (cdr col)))
+                                                      acc2))
+                                                '()
+                                                (cdr (get-table db table-name)))))
+                       )
+                   )
+                 '()
+                 columns)
+          )
+      )
+    )
+  )
+
+(define select
+  (λ (db table-name columns conditions)
+    (let ( (result-list (select-aux db  table-name columns conditions))
+           )
+      (foldl (λ(col acc)
+               (if (not (pair? col))
+                   (append acc (list (list-ref result-list (index-of columns col))))
+                   (cond
+                     ( (equal? (car col) 'max)  (append acc (list (max (list-ref result-list (index-of columns col))))) )
+                     ( (equal? (car col) 'min)  (append acc (list (min (list-ref result-list (index-of columns col))))) )
+                     ( (equal? (car col) 'avg)  (append acc (list (avg (list-ref result-list (index-of columns col))))) )
+                     ( (equal? (car col) 'count)  (append acc (list (count (list-ref result-list (index-of columns col))))) )
+                     ( (equal? (car col) 'sort-asc)  (append acc (list (sort-asc (list-ref result-list (index-of columns col))))) )
+                     ( (equal? (car col) 'sort-desc)  (append acc (list (sort-desc (list-ref result-list (index-of columns col))))) )
+                     ( (equal? (car col) 'sum)  (append acc (list (sum (list-ref result-list (index-of columns col))))) )
+                     )
+                   )
+               )
+             '()
+             columns)
+      )
+    )
+  )
+
+;====================================
+;=             Cerința 4            =
+;=           Operația update        =
+;=            20 de puncte          =
+;====================================
+
+(define set-null
+  (λ(col-value L)
+   (append (take L (index-of L col-value)) (list NULL) (drop L (+ (index-of L col-value) 1)))
+    )
+  )
+
+(define update
+  (λ (db table-name values conditions)
+    (let ( (indexes (multiple-conditions db table-name conditions)) )
+      (foldl (λ(table acc)
+               (if (equal? (car table) table-name)
+                   (append acc (list (append (list (car (get-table db table-name)))
+                                             (foldl (λ(col acc1)
+                                                      (if (assoc (car col) values) 
+                                                         (append acc1 (list (append (list (car col)) (car (foldl (λ(col-value acc3)                                                                                                     
+                                                           (if (member (index-of (cdr acc3) col-value) indexes)
+                                                               (cons (append (car acc3) (list (cdr (assoc (car col) values)))) (set-null col-value (cdr acc3)))
+                                                               (cons (append (car acc3) (list col-value)) (set-null col-value (cdr acc3))))                                                                                                        
+                                                           )
+                                                         (cons '() (cdr col))
+                                                         (cdr col))))
+                                                                           ))
+                                                         (append acc1 (list col)))
+                                                      )
+                                                    '()
+                                                    (cdr (get-table db table-name))))
+                                             
+                                     ))
+                   (append acc (list (get-table db (car table))))
+                   )
+               )
+             '()
+             db)  
+      )
+    )
+  )
+
+;====================================
+;=             Cerința 5            =
+;=           Operația remove        =
+;=              10 puncte           =
+;====================================
+
+(define delete
+  (λ (db table-name conditions)
+    (let ( (indexes (multiple-conditions db table-name conditions)) )
+      (foldl (λ(table acc)
+               (if (equal? (car table) table-name)
+                   (append acc (list (append (list (car (get-table db table-name)))
+                                             (foldl (λ(col acc1)                                                      
+                                                      (append acc1 (list (append (list (car col)) (car (foldl (λ(col-value acc3)                                                                                                     
+                                                                                                                (if (member (index-of (cdr acc3) col-value) indexes)
+                                                                                                                    (cons (car acc3) (set-null col-value (cdr acc3)))
+                                                                                                                    (cons (append (car acc3) (list col-value)) (set-null col-value (cdr acc3))))                                                                                                        
+                                                                                                                )
+                                                                                                              (cons '() (cdr col))
+                                                                                                              (cdr col))))
+                                                                         ))
+                                                      )
+                                                    '()
+                                                    (cdr (get-table db table-name))))
+                                             
+                                     ))
+                   (append acc (list (get-table db (car table))))
+                   )
+               )
+             '()
+             db)
+      )
+    )
+  )
+
+;====================================
+;=               Bonus              =
+;=            Natural Join          =
+;=            20 de puncte          =
+;====================================
+(define natural-join
+  (λ (db tables columns conditions)
+    db))
